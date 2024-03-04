@@ -1,0 +1,28 @@
+﻿@{
+    ViewData["Title"] = "CalcularNumero";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container">
+    <h1 style="font-family: 'Times New Roman'" class="text-center">CalcularNumero</h1>
+    <hr />
+
+    @using (Html.BeginForm("CalcularNumero", "NumeroFaltante", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <div class="row m-4">
+            <div class="mb-3 col-md-4">
+                <label for="numeroInput" class="form-label">Escriba un número del 1 al 100...</label>
+                <input type="number" class="form-control" id="numeroInput" name="numero" placeholder="Ej: 56">
+            </div>
+            <div class="col-md-4 ms-auto">
+                <label for="numeroExtraido" class="form-label">El número extraido fue...</label>
+                <input class="form-control" type="number" id="numeroExtraido" name="numeroExtraido" value="@ViewBag.NumeroExtraido" aria-label="Número extraído" disabled readonly>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 align-items-center justify-content-center">
+            <input type="submit" value="Extraer número" class="btn btn-success" />
+            <br />
+        </div>
+    }
+</div>

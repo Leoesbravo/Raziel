@@ -1,0 +1,32 @@
+﻿
+@{
+    ViewData["Title"] = "Carga";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1 class="text-center">Carga Masiva</h1>
+
+<hr />
+
+<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+<script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
+<script type="text/javascript" src="~/js/CargaMasiva.js"></script>
+
+@using (Html.BeginForm("Carga", "CargaMasiva", FormMethod.Post, new { enctype = "multipart/form-data" }))
+{
+    <input type="file" class="form-control" name="file" id="inpxls" onchange="validateFile()" />
+
+    <br />
+    <div class="row g-3">
+        <div class="col-md-1">
+            <a><input type="submit" value="Insertar" class="btn btn-success" /></a>
+            <br />
+        </div>
+    </div>
+}
+@if (ViewBag.Mensaje.Length > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        @ViewBag.Mensaje
+    </div>
+}
