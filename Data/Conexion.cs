@@ -4,7 +4,7 @@
     {
         public static string GetConnectionString()
         {
-            return "Server=RAZIEL; Database=RazielNextTechnologies; TrustServerCertificate=True; User ID=sa; Password=123qwe;";
+            return "Server=.; Database=RazielNextTech; TrustServerCertificate=True; User ID=sa; Password=pass@word1;";
         }
     }
 }

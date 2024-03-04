@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using System.Data;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -17,27 +19,29 @@ namespace Presentacion.Controllers
         public IActionResult Carga(IFormFile file)
         {
             var result = Negocio.Carga.ConvertToDataset(file);
-            if (result.Item2 && result.Item3 == null)
+            if (result.Item2 && result.Item4 == null)
             {
-                Dictionary<string, byte[]> archivosProcesados = GenerateCSVFiles(result.Item1);
-                foreach (var archivo in archivosProcesados)
+                foreach (DataTable table in result.Item1.Tables)
                 {
-                    ViewBag.Mensaje = "Se ha procesado tu informacion satisfactoriamente";
-                    return File(archivo.Value, "text/csv", archivo.Key);
+                    Negocio.Carga.BulkCopySql(table);
                 }
+                Dictionary<string, byte[]> archivosProcesados = GenerateCSVFiles(result.Item1);
+                HttpContext.Session.SetString("Archivos", JsonConvert.SerializeObject(archivosProcesados));
+                ViewBag.Result = 1;
+                return View();
+
             }
-            else if(result.Item3 != null)
+            else if (result.Item3 != null)
             {
-                ViewBag.Mensaje = "Hay registros que no cumplen con el formato necesario";
+                ViewBag.Result = 2;
                 return View();
             }
             else
             {
-                ViewBag.Mensaje = "Ocurrio un error al procesas tu archivo";
+                ViewBag.Result = 3;
                 return View();
             }
-            return View();
-           
+
         }
         private byte[] GenerateProcessedCSV(DataTable table)
         {
@@ -56,20 +60,6 @@ namespace Presentacion.Controllers
                 return memoryStream.ToArray();
             }
         }
-        [HttpGet]
-        public IActionResult BulkCopy()
-        {
-            return View();
-        }
-        [HttpPost]
-        public IActionResult BulkCopy(Modelo.Result result)
-        {
-            IFormFile file = Request.Form.Files["csv"];
-
-            Modelo.Result result1 = Negocio.Carga.BulkCopySql(file);
-
-            return View(result1);
-        }
         private Dictionary<string, byte[]> GenerateCSVFiles(DataSet dataSet)
         {
             Dictionary<string, byte[]> csvFiles = new Dictionary<string, byte[]>();
@@ -81,6 +71,26 @@ namespace Presentacion.Controllers
             }
 
             return csvFiles;
+        }
+        public ActionResult DescargarArchivos()
+        {
+            var archivosProcesados = HttpContext.Session.GetString("Archivos");
+            var archivos = JsonConvert.DeserializeObject<Dictionary<string, byte[]>>(archivosProcesados);
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var zipArchive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var archivo in archivos)
+                    {
+                        var zipEntry = zipArchive.CreateEntry(archivo.Key, CompressionLevel.Fastest);
+                        using (var entryStream = zipEntry.Open())
+                        {
+                            entryStream.Write(archivo.Value, 0, archivo.Value.Length);
+                        }
+                    }
+                }
+                return File(memoryStream.ToArray(), "application/zip", "archivos_procesados.zip");
+            }
         }
     }
 }
