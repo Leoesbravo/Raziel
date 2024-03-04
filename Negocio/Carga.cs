@@ -33,7 +33,7 @@ namespace Negocio
                         
                         string errores = "";
                         string[] rows = reader.ReadLine().Split(',');
-                        if (rows.Length > 1)
+                        if (rows.Length > 7)
                         {
                             registro = registro + 1;
                             DataRow dataRow = tableCharge.NewRow();
