@@ -31,7 +31,7 @@ namespace Presentacion.Controllers
                 return View();
 
             }
-            else if (result.Item4.Count > 0)
+            else if (result.Item4 != null)
             {
                 ViewBag.Result = 2;
                 return View(result.Item4);
