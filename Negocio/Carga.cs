@@ -8,14 +8,15 @@ namespace Negocio
 {
     public class Carga
     {
-        public static (DataSet, bool, string, List<object>) ConvertToDataset(IFormFile file)
+        public static (DataSet, bool, string, List<string>) ConvertToDataset(IFormFile file)
         {
-            
-            List<object> errorList = new List<object>(); 
+            List<string> errorList = new List<string>(); 
             DataSet dataSet = new DataSet();
             DataTable tableCharge = new DataTable();
             DataTable tableCompany = new DataTable();
             Dictionary<string, string> uniqueCompanies = new Dictionary<string, string>();
+            int registro = 1;
+            string[] formatos = { "MM-dd-yyyy", "dd-MM-yyyy", "yyyy-MM-dd" };
             try
             {
                 using (StreamReader reader = new StreamReader(file.OpenReadStream()))
@@ -26,35 +27,45 @@ namespace Negocio
                     {
                         tableCharge.Columns.Add(header.Trim());
                     }                 
+
                     while (!reader.EndOfStream)
                     {
+                        
+                        string errores = "";
                         string[] rows = reader.ReadLine().Split(',');
                         if (rows.Length > 1)
                         {
+                            registro = registro + 1;
                             DataRow dataRow = tableCharge.NewRow();
 
                             if (rows[0].Trim().Length > 10)
                             {
                                 dataRow[0] = rows[0].Trim();
                             }
-
                             else
                             {
-                                errorList.Add(dataRow);
+                                errores = errores + "No tiene ID, ";                               
                             }
 
                             dataRow[1] = rows[1].ToString().Trim();
-                            dataRow[2] = rows[2].ToString().Trim();
+                            if (rows[2].Trim().Length > 10)
+                            {
+                                dataRow[2] = rows[2].Trim();
+                            }
+                            else
+                            {
+                                errores = errores + "No tiene ID de compañia,";
+                            }
                             rows[3] = Regex.Replace(rows[3], "[a-zA-Z]", "0");
                             dataRow[3] = decimal.Parse(rows[3].ToString().Trim());
                             dataRow[4] = rows[4].ToString();
-                            if (rows[5].ToString().Contains("/"))
+                            if (formatos.Any(formato => DateTime.TryParseExact(rows[5].ToString(), formato, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)))
                             {
                                 dataRow[5] = rows[5].ToString();
                             }
                             else
                             {
-                                dataRow[5] = DateTime.Now.ToString();   
+                                errores = errores + "No tiene fecha de creación correcta,";
                             }
                             if( rows[6].ToString().Length > 0)
                             {
@@ -68,6 +79,11 @@ namespace Negocio
                             if (!uniqueCompanies.ContainsKey(rows[2]))
                             {
                                 uniqueCompanies.Add(rows[2], rows[1]);
+                            }
+                            if(errores.Length > 0)
+                            {
+                                errores = "ID: " + registro + " " + errores;
+                                errorList.Add(errores);
                             }
                         }
                     }

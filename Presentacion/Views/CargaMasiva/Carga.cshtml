@@ -1,4 +1,5 @@
-﻿@{
+﻿@model List<string>
+@{
     ViewData["Title"] = "Carga";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
@@ -30,6 +31,21 @@
                 Algunos registros no cumplen con el formato valido
             </div>
         </div>
+        <table class="table table-dark table-hover table-bordered">
+            <thead class="table-secondary">
+                <tr class="text-center">
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (string error in Model)
+                {
+                    <tr class="text-center">
+                        <td>@error</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
         break;
     case 3:
         <div class="alert alert-danger" role="alert">
@@ -44,7 +60,7 @@
         <hr />
         @using (Html.BeginForm("Carga", "CargaMasiva", FormMethod.Post, new { enctype = "multipart/form-data" }))
         {
-            <input type="file" class="form-control" name="file" id="inpxls" onchange="validateFile()" />
+            <input type="file" class="form-control" name="file" id="inpxls" onchange="validateFile()" required />
 
             <br />
             <div class="row justify-content-center">
