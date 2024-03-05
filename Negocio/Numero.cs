@@ -28,7 +28,6 @@ namespace Negocio
                 {
                     numerosNaturales.Remove(numero);
 
-                    // Buscar el número faltante
                     foreach (int num in Enumerable.Range(1, 100))
                     {
                         if (!numerosNaturales.Contains(num))

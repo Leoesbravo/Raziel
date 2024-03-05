@@ -10,111 +10,143 @@ namespace Negocio
     {
         public static (DataSet, bool, string, List<string>) ConvertToDataset(IFormFile file)
         {
-            List<string> errorList = new List<string>(); 
+            List<string> errorList = new List<string>();
             DataSet dataSet = new DataSet();
-            DataTable tableCharge = new DataTable();
-            DataTable tableCompany = new DataTable();
-            Dictionary<string, string> uniqueCompanies = new Dictionary<string, string>();
-            int registro = 1;
-            string[] formatos = { "MM-dd-yyyy", "dd-MM-yyyy", "yyyy-MM-dd" };
+
             try
             {
                 using (StreamReader reader = new StreamReader(file.OpenReadStream()))
                 {
-                    string[] encabezados = reader.ReadLine().Split(',');
+                    DataTable tableCharge = CreateDataTable(reader.ReadLine());
 
-                    foreach (string header in encabezados)
-                    {
-                        tableCharge.Columns.Add(header.Trim());
-                    }                 
+                    Dictionary<string, string> uniqueCompanies = new Dictionary<string, string>();
+                    int registro = 1;
 
                     while (!reader.EndOfStream)
                     {
-                        
                         string errores = "";
                         string[] rows = reader.ReadLine().Split(',');
-                        if (rows.Length > 7)
+
+                        if (rows.Length > 0 && !string.IsNullOrWhiteSpace(rows[0]))
                         {
-                            registro = registro + 1;
-                            DataRow dataRow = tableCharge.NewRow();
-
-                            if (rows[0].Trim().Length > 10)
+                            DataRow dataRow = ProcessDataRow(tableCharge, rows, ref registro, ref errores, uniqueCompanies);
+                            if (!string.IsNullOrEmpty(errores))
                             {
-                                dataRow[0] = rows[0].Trim();
-                            }
-                            else
-                            {
-                                errores = errores + "No tiene ID, ";                               
-                            }
-
-                            dataRow[1] = rows[1].ToString().Trim();
-                            if (rows[2].Trim().Length > 10)
-                            {
-                                dataRow[2] = rows[2].Trim();
-                            }
-                            else
-                            {
-                                errores = errores + "No tiene ID de compañia,";
-                            }
-                            rows[3] = Regex.Replace(rows[3], "[a-zA-Z]", "0");
-                            dataRow[3] = decimal.Parse(rows[3].ToString().Trim());
-                            dataRow[4] = rows[4].ToString();
-                            if (formatos.Any(formato => DateTime.TryParseExact(rows[5].ToString(), formato, CultureInfo.InvariantCulture, DateTimeStyles.None, out _)))
-                            {
-                                dataRow[5] = rows[5].ToString();
-                            }
-                            else
-                            {
-                                errores = errores + "No tiene fecha de creación correcta,";
-                            }
-                            if( rows[6].ToString().Length > 0)
-                            {
-                                dataRow[6] = rows[6].ToString();
-                            }
-                            else
-                            {
-                                dataRow[6] = DBNull.Value;
-                            }                           
-                            tableCharge.Rows.Add(dataRow);
-                            if (!uniqueCompanies.ContainsKey(rows[2]))
-                            {
-                                uniqueCompanies.Add(rows[2], rows[1]);
-                            }
-                            if(errores.Length > 0)
-                            {
-                                errores = "ID: " + registro + " " + errores;
-                                errorList.Add(errores);
+                                errorList.Add($"ID: {registro} {errores}");
                             }
                         }
                     }
-                    tableCompany.Columns.Add("CompanyID", typeof(string));
-                    tableCompany.Columns.Add("CompanyName", typeof(string));
 
-                    foreach (var company in uniqueCompanies)
-                    {
-                        DataRow companyRow = tableCompany.NewRow();
-                        companyRow["CompanyID"] = company.Key;
-                        companyRow["CompanyName"] = company.Value;
-                        tableCompany.Rows.Add(companyRow);
-                    }
+                    DataTable tableCompany = CreateCompanyDataTable(uniqueCompanies);
+
+                    dataSet.Tables.Add(tableCompany);
+                    dataSet.Tables.Add(tableCharge);
                 }
-                tableCharge.Columns.RemoveAt(1);
-                dataSet.Tables.Add(tableCompany);
-                dataSet.Tables.Add(tableCharge);
-                if(errorList.Count > 0)
-                {
-                    return (dataSet, false, "", errorList);
-                }
-                else
-                {
-                    return (dataSet, true, "", null);
-                }            
+
+                return (dataSet, errorList.Count == 0, "", errorList);
             }
             catch (Exception ex)
             {
                 return (dataSet, false, ex.Message, null);
             }
-            
+        }
+
+        private static DataTable CreateDataTable(string headers)
+        {
+            DataTable dataTable = new DataTable("Charge");
+            string[] encabezados = headers.Split(',');
+
+            foreach (string header in encabezados)
+            {
+                dataTable.Columns.Add(header.Trim());
+            }
+
+            return dataTable;
+        }
+
+        private static DataRow ProcessDataRow(DataTable tableCharge, string[] rows, ref int registro, ref string errores, Dictionary<string, string> uniqueCompanies)
+        {
+            DataRow dataRow = tableCharge.NewRow();
+
+            if (rows[0].Trim().Length > 10)
+            {
+                dataRow[0] = rows[0].Trim();
+            }
+            else
+            {
+                errores = "No tiene ID";
+            }
+
+            dataRow[1] = rows[1].Trim();
+
+            if (rows[2].Trim().Length > 10)
+            {
+                dataRow[2] = rows[2].Trim();
+            }
+            else
+            {
+                errores = "No tiene ID de compañia";
+            }
+            if (Regex.IsMatch(rows[3], "[a-zA-Z]"))
+            {
+                errores = "No tiene el amount en formato valido";
+            }
+            else
+            {
+                dataRow[3] = decimal.Parse(rows[3].Trim());
+            }          
+            dataRow[4] = rows[4].Trim();
+            string fecha = rows[5].Trim();
+            if (IsValidDateFormat(fecha))
+            {
+                dataRow[5] = fecha;
+            }
+            else
+            {
+                errores = "No tiene fecha de creación correcta";
+            }
+
+            if (!string.IsNullOrWhiteSpace(rows[6]))
+            {
+                dataRow[6] = rows[6].Trim();
+            }
+            else
+            {
+                dataRow[6] = DBNull.Value;
+            }
+
+            tableCharge.Rows.Add(dataRow);
+            registro++;
+
+            if (!uniqueCompanies.ContainsKey(rows[2]))
+            {
+                uniqueCompanies.Add(rows[2], rows[1]);
+            }
+
+            return dataRow;
+        }
+
+        private static bool IsValidDateFormat(string fecha)
+        {
+            string[] formatos = { "MM-dd-yyyy", "dd-MM-yyyy", "yyyy-MM-dd" };
+            return formatos.Any(formato => DateTime.TryParseExact(fecha, formato, CultureInfo.InvariantCulture, DateTimeStyles.None, out _));
+        }
+
+        private static DataTable CreateCompanyDataTable(Dictionary<string, string> uniqueCompanies)
+        {
+            DataTable tableCompany = new DataTable("Company");
+            tableCompany.Columns.Add("CompanyID", typeof(string));
+            tableCompany.Columns.Add("CompanyName", typeof(string));
+
+            foreach (var company in uniqueCompanies)
+            {
+                DataRow companyRow = tableCompany.NewRow();
+                companyRow["CompanyID"] = company.Key;
+                companyRow["CompanyName"] = company.Value;
+                tableCompany.Rows.Add(companyRow);
+            }
+
+            return tableCompany;
         }
 
         public static void BulkCopySql(DataTable table)
