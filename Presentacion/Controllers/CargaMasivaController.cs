@@ -19,7 +19,7 @@ namespace Presentacion.Controllers
         public IActionResult Carga(IFormFile file)
         {
             var result = Negocio.Carga.ConvertToDataset(file);
-            if (result.Item2 && result.Item4 == null)
+            if (result.Item2 && result.Item4.Count == 0)
             {
                 foreach (DataTable table in result.Item1.Tables)
                 {

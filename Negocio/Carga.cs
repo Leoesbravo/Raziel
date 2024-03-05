@@ -38,12 +38,12 @@ namespace Negocio
                     }
 
                     DataTable tableCompany = CreateCompanyDataTable(uniqueCompanies);
-
+                    tableCharge.Columns.Remove("name");
                     dataSet.Tables.Add(tableCompany);
                     dataSet.Tables.Add(tableCharge);
                 }
 
-                return (dataSet, errorList.Count == 0, "", errorList);
+                return (dataSet, true, "", errorList);
             }
             catch (Exception ex)
             {
@@ -60,7 +60,7 @@ namespace Negocio
             {
                 dataTable.Columns.Add(header.Trim());
             }
-
+            
             return dataTable;
         }
 
